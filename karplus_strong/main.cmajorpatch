@@ -9,5 +9,12 @@
     "manufacturer":     "Dynamic Cast",
     "isInstrument":     true,
 
-    "source":           "main.cmajor"
+    "source":           "main.cmajor",
+
+    "view": {
+        "src": "KarplusStrong_GUI.js",
+        "width": 500,
+        "height": 250,
+        "resizable": false
+    }
 }
