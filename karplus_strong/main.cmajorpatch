@@ -1,10 +1,9 @@
-
 {
     "CmajorVersion":    1,
     "ID":               "dev.dynamic-cast.workshops.adc23",
     "version":          "1.0",
-    "name":             "main",
-    "description":      "A polyphonic Karplus-Strong implementation",
+    "name":             "Karplus-Strong Synthesizer",
+    "description":      "A polyphonic Karplus-Strong string synthesis implementation",
     "category":         "generator",
     "manufacturer":     "Dynamic Cast",
     "isInstrument":     true,
@@ -12,9 +11,9 @@
     "source":           "main.cmajor",
 
     "view": {
-        "src": "KarplusStrong_GUI.js",
-        "width": 500,
-        "height": 250,
+        "src": "ui/index.js",
+        "width": 280,
+        "height": 350,
         "resizable": false
     }
 }
