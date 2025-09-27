@@ -1,4 +1,3 @@
-// filepath: karplus_strong/ui/index.js
 import { createKarplusView } from "./controls/view.js";
 
 export default function createPatchView (patchConnection)
@@ -40,10 +39,26 @@ export default function createPatchView (patchConnection)
             };
         };
 
+        const createAmplitudeBinding = (targetEndpointID) =>
+        {
+            const endpointDetails = currentStatus?.details?.outputs?.find (({ endpointID }) => endpointID === targetEndpointID);
+
+            if (!endpointDetails) return null;
+
+            return {
+                attachListener: (callback) =>
+                {
+                    patchConnection.addEndpointListener (endpointDetails.endpointID, callback);
+                    return () => patchConnection.removeEndpointListener (endpointDetails.endpointID, callback);
+                }
+            };
+        };
+
         const karplusUI = createKarplusView ({
             impulseLength: createParameterBinding ("impulseLength"),
             filterFreq: createParameterBinding ("filter"),
             feedbackAmount: createParameterBinding ("feedback"),
+            amplitude: createAmplitudeBinding ("amplitude"),
         });
 
         mainContainer.appendChild (karplusUI);

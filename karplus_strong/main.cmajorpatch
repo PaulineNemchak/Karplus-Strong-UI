@@ -1,6 +1,6 @@
 {
     "CmajorVersion":    1,
-    "ID":               "dev.dynamic-cast.workshops.adc23",
+    "ID":               "dev.dynamic-cast.workshops.adc25",
     "version":          "1.0",
     "name":             "Karplus-Strong Synthesizer",
     "description":      "A polyphonic Karplus-Strong string synthesis implementation",
@@ -12,8 +12,8 @@
 
     "view": {
         "src": "ui/index.js",
-        "width": 280,
-        "height": 350,
+        "width": 380,
+        "height": 380,
         "resizable": false
     }
 }

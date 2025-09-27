@@ -2,6 +2,7 @@ graph Main [[ main ]]
 {
     input event std::midi::Message midiIn;
     output stream float out;
+    output event float amplitude [[ name: "amplitude", min: 0.0f, max: 1.0f ]];
 
     input event float impulseLength [[ name: "length", min: 0.1f, max: 5.0f, init: 1.0f]];
     input event float filter [[ name: "filter", min: 100, max: 10000, init: 500]];
@@ -10,6 +11,7 @@ graph Main [[ main ]]
 
     node voices = Voice[8];
     node voiceAllocator = std::voices::VoiceAllocator(8);
+    node amplitudeAnalyzer = AmplitudeAnalyzer;
 
     connection
     {
@@ -21,6 +23,7 @@ graph Main [[ main ]]
         filter -> voices.filterFrequency;
 
         voices -> out;
+        voices -> amplitudeAnalyzer -> amplitude;
     }
 }
 
@@ -132,6 +135,48 @@ processor Delay
             ++readPos;
             ++writePos;
 
+            advance();
+        }
+    }
+}
+
+processor AmplitudeAnalyzer
+{
+    input stream float in;
+    output event float out;
+
+    float envelope = 0.0f;
+    let attackFactor = 0.1f;   // Fast attack
+    let releaseFactor = 0.99f; // Slow release
+    let gainBoost = 3.0f;      // Boost signal for better visibility
+    let outputRate = 30.0f;    // Send amplitude updates 30 times per second
+    int sampleCounter = 0;
+    int samplesPerOutput;
+
+    void init()
+    {
+        samplesPerOutput = int(processor.frequency / outputRate);
+    }
+
+    void main()
+    {
+        loop
+        {
+            let inputSample = abs(in) * gainBoost;
+            
+            // Improved envelope follower with separate attack/release
+            if (inputSample > envelope)
+                envelope = envelope * (1.0f - attackFactor) + inputSample * attackFactor;
+            else
+                envelope = envelope * releaseFactor + inputSample * (1.0f - releaseFactor);
+            
+            // Send amplitude updates at regular intervals
+            if (++sampleCounter >= samplesPerOutput)
+            {
+                out <- envelope;
+                sampleCounter = 0;
+            }
+            
             advance();
         }
     }

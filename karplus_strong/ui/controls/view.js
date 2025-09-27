@@ -1,9 +1,3 @@
-// filepath: karplus_strong/ui/controls/view.js
-/**
- * Custom Karplus Strong synthesizer interface
- * Features controls for impulse length, filter frequency, and feedback amount
- */
-
 export function createKarplusView (parameterBindings, configuration = {})
 {
     const elementName = "karplus-strong-interface";
@@ -51,6 +45,98 @@ class KarplusStrongInterface extends HTMLElement
             bindParameterToControl (parameterBindings.filterFreq, (param) => createRotaryControl ("filter-control", param));
             bindParameterToControl (parameterBindings.feedbackAmount, (param) => createRotaryControl ("feedback-control", param));
 
+            // Setup amplitude display
+            if (parameterBindings.amplitude)
+            {
+                const amplitudeCanvas = shadowDOM.getElementById ("amplitude-canvas");
+                const ctx = amplitudeCanvas.getContext('2d');
+
+                const canvasWidth = 280;
+                const canvasHeight = 140;
+
+                ctx.imageSmoothingEnabled = false;
+                ctx.webkitImageSmoothingEnabled = false;
+                ctx.mozImageSmoothingEnabled = false;
+                ctx.msImageSmoothingEnabled = false;
+
+                const dpr = window.devicePixelRatio || 1;
+                amplitudeCanvas.width = canvasWidth * dpr;
+                amplitudeCanvas.height = canvasHeight * dpr;
+                amplitudeCanvas.style.width = canvasWidth + 'px';
+                amplitudeCanvas.style.height = canvasHeight + 'px';
+                ctx.scale(dpr, dpr);
+
+                // Amplitude history buffer
+                const historyLength = canvasWidth;
+                let amplitudeHistory = new Array(historyLength).fill(0);
+                let historyIndex = 0;
+
+                let maxAmplitude = 0.1;
+                let scaleUpdateCounter = 0;
+                const scaleUpdateInterval = 30;
+
+                const drawAmplitudeDisplay = () => {
+
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+                    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+                    ctx.strokeStyle = '#fefffeff';
+                    ctx.lineWidth = 1.5;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.beginPath();
+                    
+                    let hasStarted = false;
+                    for (let i = 0; i < historyLength - 1; i++) {
+                        const x = Math.floor(i) + 0.5;
+                        const normalizedY = Math.min(1.0, amplitudeHistory[i] / maxAmplitude);
+                        const y = Math.floor(canvasHeight - 10 - (normalizedY * (canvasHeight - 30))) + 0.5;
+                        
+                        if (!hasStarted) {
+                            ctx.moveTo(x, y);
+                            hasStarted = true;
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                    ctx.stroke();
+
+                    const normalizedCurrentY = Math.min(1.0, amplitudeHistory[historyLength - 1] / maxAmplitude);
+                    const currentY = Math.floor(canvasHeight - 10 - (normalizedCurrentY * (canvasHeight - 30)));
+                    const currentX = Math.floor(canvasWidth - 2);
+
+                    ctx.fillStyle = '#fefffeff';
+                    ctx.beginPath();
+                    ctx.arc(currentX, currentY, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                };
+                
+                const unsubscribeAmplitude = parameterBindings.amplitude.attachListener?.((value) => {
+                    const processedValue = Math.pow(value, 0.7) * 1.2;
+
+                    if (processedValue > maxAmplitude) {
+                        maxAmplitude = processedValue * 1.1;
+                    } else if (scaleUpdateCounter++ > scaleUpdateInterval) {
+                        // Gradually reduce max if no peaks for a while
+                        const historyMax = Math.max(...amplitudeHistory);
+                        if (historyMax < maxAmplitude * 0.7) {
+                            maxAmplitude = Math.max(0.1, historyMax * 1.3);
+                        }
+                        scaleUpdateCounter = 0;
+                    }
+                    
+                    // Shift history buffer and add new value (keep original value, not normalized)
+                    amplitudeHistory.shift();
+                    amplitudeHistory.push(processedValue);
+
+                    drawAmplitudeDisplay();
+                });
+
+                drawAmplitudeDisplay();
+
+                if (unsubscribeAmplitude)
+                    activeSubscriptions.push (unsubscribeAmplitude);
+            }
+
             this.cleanupCallback = () =>
             {
                 activeSubscriptions.forEach ((cleanup) => cleanup?.());
@@ -88,13 +174,13 @@ function generateInterfaceHTML()
 }
 
 .karplus-main-panel {
-    width: 280px;
-    height: 350px;
+    width: 380px;
+    height: 380px;
     background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
     border-radius: 8px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .control-section {
@@ -135,25 +221,25 @@ function generateInterfaceHTML()
 #impulse-control {
     position: absolute;
     top: 20px;
-    left: 20px;
+    left: 10%;
 }
 
 #filter-control {
     position: absolute;
     top: 20px;
-    right: 20px;
+    left: 40%;
+    transform: translateX(-50%);
 }
 
 #feedback-control {
     position: absolute;
-    top: 120px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 20px;
+    left: 70%;
 }
 
 .control-label {
     position: absolute;
-    top: 80px;
+    top: 100px;
     left: 50%;
     transform: translateX(-50%);
     color: #cccccc;
@@ -165,13 +251,36 @@ function generateInterfaceHTML()
 
 .brand-footer {
     position: absolute;
-    bottom: 20px;
+    bottom: 2px;
     left: 50%;
     transform: translateX(-50%);
     width: 100px;
     height: 20px;
     opacity: 0.6;
 }
+
+.amplitude-display {
+    position: absolute;
+    top: 150px;
+    left: 20px;
+    right: 20px;
+    width: calc(100% - 40px);
+    height: 140px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 6px;
+    border: 1px solid #444;
+    overflow: visible;
+}
+
+.amplitude-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
 </style>
 
 <div class="karplus-main-panel">
@@ -179,13 +288,17 @@ function generateInterfaceHTML()
     
     <div class="control-section">
         <div id="impulse-control" class="rotary-knob"></div>
-        <div class="control-label" style="top: 100px; left: 15px;">IMPULSE</div>
+        <div class="control-label" style="top: 100px; left: 10%; transform: none;">IMPULSE</div>
         
         <div id="filter-control" class="rotary-knob"></div>
-        <div class="control-label" style="top: 100px; right: 15px;">FILTER</div>
+        <div class="control-label" style="top: 100px; left: 50%; transform: translateX(-50%);">FILTER</div>
         
-        <div id="feedback-control" class="rotary-knob small-knob"></div>
-        <div class="control-label" style="top: 200px; left: 50%; transform: translateX(-50%);">FEEDBACK</div>
+        <div id="feedback-control" class="rotary-knob"></div>
+        <div class="control-label" style="top: 100px; left: 70%; transform: none;">FEEDBACK</div>
+        
+        <div id="amplitude-display" class="amplitude-display">
+            <canvas id="amplitude-canvas" class="amplitude-canvas" width="340" height="140"></canvas>
+        </div>
     </div>
     
     <div class="brand-footer">
