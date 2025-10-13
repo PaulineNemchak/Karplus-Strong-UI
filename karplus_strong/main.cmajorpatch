@@ -12,8 +12,8 @@
 
     "view": {
         "src": "ui/index.js",
-        "width": 570,
-        "height": 570,
+        "width": 580,
+        "height": 580,
         "resizable": false
     }
 }
