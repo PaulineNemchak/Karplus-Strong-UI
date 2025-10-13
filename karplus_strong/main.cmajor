@@ -146,10 +146,10 @@ processor AmplitudeAnalyzer
     output event float out;
 
     float envelope = 0.0f;
-    let attackFactor = 0.1f;   // Fast attack
-    let releaseFactor = 0.99f; // Slow release
-    let gainBoost = 3.0f;      // Boost signal for better visibility
-    let outputRate = 30.0f;    // Send amplitude updates 30 times per second
+    let attackFactor = 0.1f;
+    let releaseFactor = 0.99f;
+    let gainBoost = 3.0f;
+    let outputRate = 30.0f;
     int sampleCounter = 0;
     int samplesPerOutput;
 
@@ -164,13 +164,11 @@ processor AmplitudeAnalyzer
         {
             let inputSample = abs(in) * gainBoost;
             
-            // Improved envelope follower with separate attack/release
             if (inputSample > envelope)
                 envelope = envelope * (1.0f - attackFactor) + inputSample * attackFactor;
             else
                 envelope = envelope * releaseFactor + inputSample * (1.0f - releaseFactor);
             
-            // Send amplitude updates at regular intervals
             if (++sampleCounter >= samplesPerOutput)
             {
                 out <- envelope;
